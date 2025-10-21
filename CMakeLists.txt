@@ -17,9 +17,26 @@ find_package(tf2 REQUIRED)
 
 include_directories(include)
 
-add_executable(arm_control_node src/arm_control_node.cpp)
-ament_target_dependencies(arm_control_node 
-  rclcpp geometry_msgs control_msgs std_msgs piper_msgs tf2)
+add_executable(arm_control_node
+  src/main.cpp
+  src/arm_control.cpp)
+ament_target_dependencies(arm_control_node
+  rclcpp
+  geometry_msgs
+  control_msgs
+  std_msgs
+  piper_msgs
+  sensor_msgs
+  tf2)
+
+install(TARGETS
+  arm_control_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY include/
+  DESTINATION include/
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

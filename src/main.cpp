@@ -1,9 +1,11 @@
+#include <memory>
+
 #include "arm_control.hpp"
 
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<arm_control_node>();
+    auto node = std::make_shared<arm_controller>();
     rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;
