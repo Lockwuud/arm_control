@@ -1,16 +1,26 @@
+/*
+ * @Author: hejia
+ * @Date: 2025-10-17 21:44:01
+ * @LastEditTime: 2025-10-22 14:04:15
+ * @Description: 
+ * @FilePath: /src/arm_control/include/arm_control.hpp
+ */
 #pragma once
 
 #include <functional>
 #include <mutex>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 #include "std_msgs/msg/bool.hpp"
-#include "control_msgs/msg/joint_jog.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "piper_msgs/msg/pos_cmd.hpp"
+#include "tf2/LinearMath/Matrix3x3.h"
+#include "tf2/LinearMath/Quaternion.h"
 
 class arm_controller : public rclcpp::Node
 {
@@ -23,56 +33,63 @@ private:
     void end_pose_callback(const geometry_msgs::msg::Pose::SharedPtr msg);
 
     void process_cartesian_input(const sensor_msgs::msg::Joy & joy);
-    void process_joint_input(const sensor_msgs::msg::Joy & joy);
 
-    void modify_and_publish_pos_cmd(const std::function<void(piper_msgs::msg::PosCmd &)> & modifier);
-    void publish_pos_cmd();
-    void toggle_control_mode();
     void enable_arm();
     void disable_arm();
-    void control_gripper(double delta);
-
-    double get_axis_value(const sensor_msgs::msg::Joy & joy, int axis_index) const;
-    bool is_button_rising(const sensor_msgs::msg::Joy & joy, int button_index);
+    void switch_control_mode();
 
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_subscription_;
     rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr end_pose_subscription_;
-    rclcpp::Publisher<control_msgs::msg::JointJog>::SharedPtr joint_pub_;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr enable_pub_;
     rclcpp::Publisher<piper_msgs::msg::PosCmd>::SharedPtr pos_cmd_pub_;
 
     piper_msgs::msg::PosCmd pos_cmd_state_;
     mutable std::mutex pos_cmd_mutex_;
 
-    std::vector<int> last_buttons_; 
-
     /* 参数预设 */
-    std::string control_mode_;
-    double joint_velocity_;          
-    double min_gripper_;
-    double max_gripper_;
-    double linear_step_;
-    double angular_step_;
-    double gripper_step_;
-    double deadzone_linear_;
-    double deadzone_angular_;
+    double min_gripper_;             // 夹爪最小值
+    double max_gripper_;             // 夹爪最大值
+    double linear_step_;             // 线性步长
+    double angular_step_;            // 角度步长
+    double gripper_step_;            // 夹爪步长
+    double deadzone_linear_;         // 摇杆线性死区
+    double deadzone_angular_;        // 摇杆角度死区
 
-    int axis_linear_x_;  
-    int axis_linear_y_;
-    int axis_linear_z_;
-    int axis_angular_roll_;
-    int axis_angular_pitch_;
-    int axis_angular_yaw_;
-    int axis_joint_1_;
-    int axis_joint_2_;
-    int axis_joint_3_;
-    int axis_joint_4_;
-    int axis_joint_5_;
-    int axis_joint_6_;
+    /*控制模式*/
+    enum ControlMode {
+        ARM,
+        CHASSIS
+    } control_mode_;
 
-    int button_enable_;
-    int button_disable_;
-    int button_toggle_mode_;
-    int button_gripper_open_;
-    int button_gripper_close_;
+    /*机械臂状态*/
+    enum ArmState {
+        ENABLED,
+        DISABLED
+    } arm_state_;
+
+    /*手柄按键*/
+    enum GamePadButtons {
+        BUTTON_A = 0,           // 机械臂使能/失能
+        BUTTON_B = 1,
+        BUTTON_X = 3,
+        BUTTON_Y = 4,
+        BUTTON_L1= 6,           // 夹爪张开
+        BUTTON_R1= 7,           // 夹爪闭合
+        BUTTON_SELECT = 10,
+        BUTTON_START = 11,
+        BUTTON_L = 13,
+        BUTTON_R = 14
+    } gamepad_buttons_;
+
+    /*手柄摇杆*/
+    enum GamePadAxes {
+        AXIS_LEFT_STICK_HORIZONTAL = 0,
+        AXIS_LEFT_STICK_VERTICAL = 1,
+        AXIS_RIGHT_STICK_HORIZONTAL = 2,
+        AXIS_RIGHT_STICK_VERTICAL = 3,
+        AXIS_L2 = 4,                    // 末端抬起
+        AXIS_R2 = 5,                    // 末端下降
+        AXIS_DPAD_HORIZONTAL = 6,
+        AXIS_DPAD_VERTICAL = 7
+    } gamepad_axes_;
 };
