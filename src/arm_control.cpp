@@ -67,8 +67,15 @@ void arm_controller::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
         return;
     }
 
-    // 模式切换
-    if (msg->buttons[BUTTON_SELECT])
+    if (last_button_states_.size() != msg->buttons.size()) {
+        last_button_states_.assign(msg->buttons.size(), 0);
+    }
+
+    const auto previous_buttons = last_button_states_;
+    last_button_states_ = msg->buttons;
+
+    const bool select_released = previous_buttons[BUTTON_SELECT] && !msg->buttons[BUTTON_SELECT];
+    if (select_released)
     {
         switch_control_mode();
         return;
@@ -76,8 +83,10 @@ void arm_controller::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
         
     if (control_mode_ == ARM)
     {
+        // Detect release edge so toggles fire once per key press
+        const bool enable_toggle_released = previous_buttons[BUTTON_A] && !msg->buttons[BUTTON_A];
         // 机械臂使能/失能
-        if (msg->buttons[BUTTON_A])
+        if (enable_toggle_released)
         {
             if (arm_state_ == DISABLED)
                 enable_arm();
@@ -88,7 +97,7 @@ void arm_controller::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
         }
 
         // 笛卡尔空间控制
-        process_cartesian_input(*msg);
+        process_cartesian_input(*msg, previous_buttons);
     }
 }
 
@@ -125,15 +134,23 @@ void arm_controller::end_pose_callback(const geometry_msgs::msg::Pose::SharedPtr
  * @return {*}
  * @author: hejia
  */
-void arm_controller::process_cartesian_input(const sensor_msgs::msg::Joy & joy)
+void arm_controller::process_cartesian_input(const sensor_msgs::msg::Joy & joy, const std::vector<int32_t> & previous_buttons)
 {
     double delta_x = joy.axes[AXIS_LEFT_STICK_VERTICAL]>deadzone_linear_ ? joy.axes[AXIS_LEFT_STICK_VERTICAL] : 
                     (joy.axes[AXIS_LEFT_STICK_VERTICAL]<-deadzone_linear_ ? joy.axes[AXIS_LEFT_STICK_VERTICAL] : 0.0);
     double delta_y = joy.axes[AXIS_LEFT_STICK_HORIZONTAL]>deadzone_linear_ ? joy.axes[AXIS_LEFT_STICK_HORIZONTAL] : 
                     (joy.axes[AXIS_LEFT_STICK_HORIZONTAL]<-deadzone_linear_ ? joy.axes[AXIS_LEFT_STICK_HORIZONTAL] : 0.0);
     double delta_z = (-joy.axes[AXIS_L2] + 1) - (-joy.axes[AXIS_R2] + 1);
-    int gripper_delta = (joy.buttons[BUTTON_L1] ? gripper_step_ : 0) -
-                        (joy.buttons[BUTTON_R1] ? gripper_step_ : 0);
+
+    const bool gripper_open_released = previous_buttons[BUTTON_L1] && !joy.buttons[BUTTON_L1];
+    const bool gripper_close_released = previous_buttons[BUTTON_R1] && !joy.buttons[BUTTON_R1];
+    int gripper_delta = 0;
+    if (gripper_open_released) {
+        gripper_delta += 1;
+    }
+    if (gripper_close_released) {
+        gripper_delta -= 1;
+    }
 
     if (delta_x == 0.0 && delta_y == 0.0 && delta_z == 0.0 && gripper_delta == 0)
         return;

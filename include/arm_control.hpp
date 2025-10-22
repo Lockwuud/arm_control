@@ -7,6 +7,7 @@
  */
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -32,7 +33,7 @@ private:
     void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
     void end_pose_callback(const geometry_msgs::msg::Pose::SharedPtr msg);
 
-    void process_cartesian_input(const sensor_msgs::msg::Joy & joy);
+    void process_cartesian_input(const sensor_msgs::msg::Joy & joy, const std::vector<int32_t> & previous_buttons);
 
     void enable_arm();
     void disable_arm();
@@ -66,6 +67,8 @@ private:
         ENABLED,
         DISABLED
     } arm_state_;
+
+    std::vector<int32_t> last_button_states_;
 
     /*手柄按键*/
     enum GamePadButtons {
