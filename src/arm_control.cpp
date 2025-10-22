@@ -14,7 +14,7 @@
  */
 arm_controller::arm_controller() : Node("arm_controller")
 {
-    this->declare_parameter("linear_step", 0.01);
+    this->declare_parameter("linear_step", 0.015);
     this->declare_parameter("angular_step", 0.05);
     this->declare_parameter("gripper_min", 0.0);
     this->declare_parameter("gripper_max", 0.08);
@@ -131,8 +131,7 @@ void arm_controller::process_cartesian_input(const sensor_msgs::msg::Joy & joy)
                     (joy.axes[AXIS_LEFT_STICK_VERTICAL]<-deadzone_linear_ ? joy.axes[AXIS_LEFT_STICK_VERTICAL] : 0.0);
     double delta_y = joy.axes[AXIS_LEFT_STICK_HORIZONTAL]>deadzone_linear_ ? joy.axes[AXIS_LEFT_STICK_HORIZONTAL] : 
                     (joy.axes[AXIS_LEFT_STICK_HORIZONTAL]<-deadzone_linear_ ? joy.axes[AXIS_LEFT_STICK_HORIZONTAL] : 0.0);
-    double delta_z = (-joy.axes[AXIS_L2] + 1) > deadzone_linear_ ? (-joy.axes[AXIS_L2] + 1) : 0.0 -
-                    (-joy.axes[AXIS_R2] + 1) > deadzone_linear_ ? -(-joy.axes[AXIS_R2] + 1) : 0.0;
+    double delta_z = (-joy.axes[AXIS_L2] + 1) - (-joy.axes[AXIS_R2] + 1);
     int gripper_delta = (joy.buttons[BUTTON_L1] ? gripper_step_ : 0) -
                         (joy.buttons[BUTTON_R1] ? gripper_step_ : 0);
 
